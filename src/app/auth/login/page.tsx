@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,7 +28,10 @@ export default function LoginPage() {
         toast.error(error.message);
       } else {
         toast.success('Login realizado com sucesso!');
-        router.push('/quiz');
+        
+        // Redirecionar para a página que o usuário estava tentando acessar
+        const redirectTo = searchParams.get('redirect') || '/';
+        router.push(redirectTo);
       }
     } catch (error) {
       toast.error('Erro ao fazer login');

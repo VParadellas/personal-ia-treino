@@ -9,35 +9,13 @@ export async function POST(request: NextRequest) {
   try {
     const quizData = await request.json();
 
-    // Calcular IMC
-    const imc = quizData.peso / Math.pow(quizData.altura / 100, 2);
-    
-    // Calcular TMB (Taxa Metabólica Basal) usando fórmula de Harris-Benedict
-    let tmb;
-    if (quizData.genero === 'masculino') {
-      tmb = 88.362 + (13.397 * quizData.peso) + (4.799 * quizData.altura) - (5.677 * quizData.idade);
-    } else {
-      tmb = 447.593 + (9.247 * quizData.peso) + (3.098 * quizData.altura) - (4.330 * quizData.idade);
-    }
+    const prompt = `Você é um personal trainer experiente. Crie um plano de treino COMPLETO e DETALHADO baseado nos seguintes dados:
 
-    // Ajustar calorias baseado no objetivo e nível de atividade
-    const fatorAtividade = quizData.diasDisponiveis >= 5 ? 1.55 : quizData.diasDisponiveis >= 3 ? 1.375 : 1.2;
-    let caloriasAlvo = tmb * fatorAtividade;
-
-    if (quizData.objetivo === 'perder_peso') {
-      caloriasAlvo -= 500;
-    } else if (quizData.objetivo === 'ganhar_massa') {
-      caloriasAlvo += 500;
-    }
-
-    // Gerar plano de treino com OpenAI
-    const treinoPrompt = `
-Você é um personal trainer experiente. Crie um plano de treino COMPLETO e DETALHADO baseado nestas informações:
-
-DADOS DO ALUNO:
+DADOS DO USUÁRIO:
 - Nome: ${quizData.nome}
 - Idade: ${quizData.idade} anos
-- Peso: ${quizData.peso}kg | Altura: ${quizData.altura}cm | IMC: ${imc.toFixed(1)}
+- Peso: ${quizData.peso}kg
+- Altura: ${quizData.altura}cm
 - Gênero: ${quizData.genero}
 - Objetivo: ${quizData.objetivo}
 - Experiência: ${quizData.experiencia}
@@ -45,167 +23,68 @@ DADOS DO ALUNO:
 - Tempo por treino: ${quizData.tempoTreino} minutos
 - Período: ${quizData.periodoTreino}
 - Local: ${quizData.localTreino}
-- Equipamentos: ${quizData.equipamentos?.join(', ') || 'Nenhum'}
-- Lesões/Limitações: ${quizData.lesoes?.join(', ') || 'Nenhuma'}
+- Equipamentos: ${quizData.equipamentos?.join(', ') || 'Todos disponíveis'}
+- Lesões: ${quizData.lesoes?.join(', ') || 'Nenhuma'}
 - Restrições: ${quizData.restricoes?.join(', ') || 'Nenhuma'}
 
 INSTRUÇÕES:
-1. Crie um plano de ${quizData.diasDisponiveis} dias por semana
-2. Cada treino deve ter duração aproximada de ${quizData.tempoTreino} minutos
-3. Adapte ao nível ${quizData.experiencia}
-4. Use APENAS os equipamentos disponíveis
-5. Considere as lesões e limitações mencionadas
-6. Inclua aquecimento e alongamento
-7. Para cada exercício, especifique: séries, repetições, descanso e dicas de execução
-8. Organize por grupos musculares de forma inteligente
+1. Crie um plano de treino semanal COMPLETO com exercícios específicos
+2. Para cada exercício, inclua: nome, séries, repetições, descanso e dicas de execução
+3. Divida os treinos por grupos musculares de forma inteligente
+4. Inclua aquecimento e alongamento
+5. Adapte à experiência do usuário (iniciante/intermediário/avançado)
+6. Considere as lesões e restrições mencionadas
+7. Seja ESPECÍFICO e DETALHADO - este é um plano real que a pessoa vai seguir
 
-FORMATO DE RESPOSTA (JSON):
+Retorne APENAS um JSON válido no seguinte formato (sem markdown, sem explicações extras):
 {
   "titulo": "Plano de Treino Personalizado",
-  "resumo": "Breve descrição do plano (2-3 linhas)",
-  "observacoes": ["Dica importante 1", "Dica importante 2", "Dica importante 3"],
+  "descricao": "Descrição geral do plano",
+  "semanas": 4,
   "treinos": [
     {
-      "dia": "Dia 1",
+      "dia": "Segunda-feira",
       "foco": "Peito e Tríceps",
-      "duracao": "${quizData.tempoTreino} min",
-      "aquecimento": "Descrição do aquecimento (5-10 min)",
+      "duracao": 60,
+      "aquecimento": "5 min de esteira + mobilidade articular",
       "exercicios": [
         {
-          "nome": "Nome do exercício",
-          "series": "3-4",
+          "nome": "Supino reto com barra",
+          "series": 4,
           "repeticoes": "8-12",
-          "descanso": "60-90s",
-          "observacoes": "Dicas de execução e cuidados"
+          "descanso": "90s",
+          "dicas": "Mantenha os pés firmes no chão e controle a descida"
         }
       ],
-      "alongamento": "Descrição do alongamento (5-10 min)"
-    }
-  ]
-}
-
-Seja específico, profissional e motivador!`;
-
-    const treinoResponse = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: 'Você é um personal trainer experiente e certificado. Crie planos de treino detalhados, seguros e eficientes. Sempre responda em JSON válido.',
-        },
-        {
-          role: 'user',
-          content: treinoPrompt,
-        },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
-    });
-
-    const planoTreino = JSON.parse(treinoResponse.choices[0].message.content || '{}');
-
-    // Gerar plano alimentar com OpenAI
-    const dietaPrompt = `
-Você é um nutricionista experiente. Crie um plano alimentar COMPLETO e DETALHADO baseado nestas informações:
-
-DADOS DO CLIENTE:
-- Nome: ${quizData.nome}
-- Idade: ${quizData.idade} anos
-- Peso: ${quizData.peso}kg | Altura: ${quizData.altura}cm | IMC: ${imc.toFixed(1)}
-- Gênero: ${quizData.genero}
-- Objetivo: ${quizData.objetivo}
-- TMB: ${tmb.toFixed(0)} kcal
-- Calorias alvo: ${caloriasAlvo.toFixed(0)} kcal/dia
-- Nível de atividade: ${quizData.diasDisponiveis} treinos/semana
-- Preferências: ${quizData.preferenciasAlimentares?.join(', ') || 'Sem restrições'}
-- Alimentos a evitar: ${quizData.alimentosEvitar?.join(', ') || 'Nenhum'}
-- Refeições preferidas: ${quizData.refeicoesPreferidas || 4} por dia
-
-INSTRUÇÕES:
-1. Crie um plano de ${quizData.refeicoesPreferidas || 4} refeições por dia
-2. Total de ${caloriasAlvo.toFixed(0)} kcal/dia
-3. Distribua macros adequadamente para o objetivo
-4. Respeite as preferências e restrições alimentares
-5. Inclua opções variadas e práticas
-6. Para cada refeição: horário sugerido, alimentos, quantidades e calorias aproximadas
-7. Adicione dicas de preparo e substituições
-
-FORMATO DE RESPOSTA (JSON):
-{
-  "titulo": "Plano Alimentar Personalizado",
-  "resumo": "Breve descrição do plano (2-3 linhas)",
-  "metasCalorias": {
-    "total": ${caloriasAlvo.toFixed(0)},
-    "proteinas": "valor em gramas",
-    "carboidratos": "valor em gramas",
-    "gorduras": "valor em gramas"
-  },
-  "observacoes": ["Dica importante 1", "Dica importante 2", "Dica importante 3"],
-  "refeicoes": [
-    {
-      "nome": "Café da Manhã",
-      "horario": "07:00 - 08:00",
-      "calorias": "valor aproximado",
-      "alimentos": [
-        {
-          "item": "Nome do alimento",
-          "quantidade": "quantidade específica",
-          "calorias": "valor aproximado"
-        }
-      ],
-      "preparo": "Dicas de preparo",
-      "substituicoes": ["Opção 1", "Opção 2"]
+      "alongamento": "5 min focado em peito e tríceps"
     }
   ],
-  "listaCompras": {
-    "proteinas": ["item 1", "item 2"],
-    "carboidratos": ["item 1", "item 2"],
-    "vegetais": ["item 1", "item 2"],
-    "frutas": ["item 1", "item 2"],
-    "outros": ["item 1", "item 2"]
-  },
-  "dicasGerais": ["Dica 1", "Dica 2", "Dica 3"]
-}
+  "observacoes": "Dicas gerais e recomendações"
+}`;
 
-Seja específico, prático e motivador!`;
-
-    const dietaResponse = await openai.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content: 'Você é um nutricionista experiente e certificado. Crie planos alimentares detalhados, saudáveis e práticos. Sempre responda em JSON válido.',
+          content: 'Você é um personal trainer experiente especializado em criar planos de treino personalizados. Sempre retorne JSON válido sem markdown.',
         },
         {
           role: 'user',
-          content: dietaPrompt,
+          content: prompt,
         },
       ],
-      response_format: { type: 'json_object' },
       temperature: 0.7,
+      response_format: { type: 'json_object' },
     });
 
-    const planoDieta = JSON.parse(dietaResponse.choices[0].message.content || '{}');
+    const workoutPlan = JSON.parse(completion.choices[0].message.content || '{}');
 
-    // Retornar planos completos
-    return NextResponse.json({
-      success: true,
-      dados: {
-        nome: quizData.nome,
-        imc: imc.toFixed(1),
-        tmb: tmb.toFixed(0),
-        caloriasAlvo: caloriasAlvo.toFixed(0),
-      },
-      treino: planoTreino,
-      dieta: planoDieta,
-    });
+    return NextResponse.json(workoutPlan);
   } catch (error) {
-    console.error('Erro ao gerar planos:', error);
+    console.error('Erro ao gerar treino:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Erro ao gerar seus planos personalizados. Tente novamente.' 
-      },
+      { error: 'Erro ao gerar treino. Tente novamente.' },
       { status: 500 }
     );
   }

@@ -2,10 +2,8 @@
 
 import Navbar from '@/components/custom/navbar';
 import { Camera, Upload, Loader2, Apple, Flame, Beef, Wheat, Droplet } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { useAuth } from '@/components/providers/auth-provider';
-import { useRouter } from 'next/navigation';
 
 interface Alimento {
   nome: string;
@@ -31,33 +29,6 @@ export default function CaloriasPage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  // Verificar autenticação
-  useEffect(() => {
-    if (!loading && !user) {
-      toast.error('Você precisa estar logado para acessar esta página');
-      router.push('/auth/login?redirect=/calorias');
-    }
-  }, [user, loading, router]);
-
-  // Mostrar loading enquanto verifica autenticação
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-orange-400 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Verificando autenticação...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Se não estiver autenticado, não renderizar nada (será redirecionado)
-  if (!user) {
-    return null;
-  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

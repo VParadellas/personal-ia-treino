@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,7 +41,10 @@ export default function SignupPage() {
         toast.error(error.message);
       } else {
         toast.success('Cadastro realizado com sucesso!');
-        router.push('/quiz');
+        
+        // Redirecionar para a página que o usuário estava tentando acessar ou para o quiz
+        const redirectTo = searchParams.get('redirect') || '/quiz';
+        router.push(redirectTo);
       }
     } catch (error) {
       toast.error('Erro ao criar conta');

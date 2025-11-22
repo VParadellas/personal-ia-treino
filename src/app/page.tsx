@@ -103,8 +103,8 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Feature 3 */}
-            <div className="group bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 hover:shadow-2xl hover:shadow-orange-500/20 transition-all hover:scale-105 border border-orange-500/10 hover:border-orange-500/30">
+            {/* Feature 3 - Foto → Calorias (AGORA COM LINK FUNCIONAL) */}
+            <Link href="/calorias" className="group bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 hover:shadow-2xl hover:shadow-orange-500/20 transition-all hover:scale-105 border border-orange-500/10 hover:border-orange-500/30 cursor-pointer">
               <div className="bg-gradient-to-br from-orange-500 to-orange-600 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-orange-500/50">
                 <Camera className="w-7 h-7 text-white" />
               </div>
@@ -112,7 +112,7 @@ export default function Home() {
               <p className="text-gray-400 text-sm leading-relaxed">
                 Tire foto do seu prato e descubra instantaneamente as calorias e macros.
               </p>
-            </div>
+            </Link>
 
             {/* Feature 4 */}
             <div className="group bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 hover:shadow-2xl hover:shadow-orange-500/20 transition-all hover:scale-105 border border-orange-500/10 hover:border-orange-500/30">

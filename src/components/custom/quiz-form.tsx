@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QuizData } from '@/lib/types';
 import { ChevronRight, ChevronLeft, Loader2, X, Mail, Lock, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/components/providers/auth-provider';
 
 const EQUIPAMENTOS_OPTIONS = [
   'Peso corporal',
@@ -35,6 +36,7 @@ const PREFERENCIAS_ALIMENTARES = [
 
 export default function QuizForm() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
@@ -69,10 +71,16 @@ export default function QuizForm() {
   };
 
   const handleQuizComplete = () => {
-    // Salvar dados do quiz temporariamente
-    localStorage.setItem('pendingQuizData', JSON.stringify(formData));
-    // Mostrar modal de cadastro
-    setShowSignupModal(true);
+    // Verificar se usuário já está logado
+    if (user) {
+      // Se já está logado, gerar treino diretamente
+      toast.success('Gerando seu treino personalizado...');
+      generateWorkout();
+    } else {
+      // Se não está logado, salvar dados e mostrar modal de cadastro
+      localStorage.setItem('pendingQuizData', JSON.stringify(formData));
+      setShowSignupModal(true);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -91,7 +99,7 @@ export default function QuizForm() {
     setLoading(true);
 
     try {
-      const { error } = await auth.signUp(signupData.email, signupData.password);
+      const { error } = await auth.signUp(signupData.email, signupData.password, signupData.name);
       
       if (error) {
         toast.error(error.message);
@@ -580,7 +588,12 @@ export default function QuizForm() {
             disabled={!canProceed() || loading}
             className="flex-1 px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/30"
           >
-            {step === totalSteps ? (
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Gerando treino...
+              </>
+            ) : step === totalSteps ? (
               'Finalizar Quiz'
             ) : (
               <>
@@ -592,8 +605,8 @@ export default function QuizForm() {
         </div>
       </div>
 
-      {/* Modal de Cadastro */}
-      {showSignupModal && (
+      {/* Modal de Cadastro - Só aparece se usuário NÃO estiver logado */}
+      {showSignupModal && !user && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-gray-900 border border-orange-500/20 rounded-3xl p-8 max-w-md w-full shadow-2xl shadow-orange-500/20">
             <div className="flex justify-between items-center mb-6">

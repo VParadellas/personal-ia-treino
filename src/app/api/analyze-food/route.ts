@@ -11,42 +11,49 @@ export async function POST(request: NextRequest) {
 
     if (!imageUrl) {
       return NextResponse.json(
-        { error: 'URL da imagem é obrigatória' },
+        { error: 'Imagem não fornecida' },
         { status: 400 }
       );
     }
 
-    const response = await openai.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
+        {
+          role: 'system',
+          content: `Você é um nutricionista especializado em análise de alimentos. Analise a imagem fornecida e identifique:
+1. Todos os alimentos visíveis
+2. Estimativa de porção de cada alimento
+3. Calorias e macros (proteínas, carboidratos, gorduras) de cada alimento
+4. Total geral da refeição
+
+Seja PRECISO e REALISTA nas estimativas. Retorne APENAS JSON válido no formato:
+{
+  "alimentos": [
+    {
+      "nome": "Nome do alimento",
+      "porcao": "Quantidade estimada (ex: 150g, 1 unidade)",
+      "calorias": 250,
+      "proteinas": 20,
+      "carboidratos": 30,
+      "gorduras": 8
+    }
+  ],
+  "total": {
+    "calorias": 500,
+    "proteinas": 40,
+    "carboidratos": 60,
+    "gorduras": 15
+  },
+  "observacoes": "Observações gerais sobre a refeição"
+}`,
+        },
         {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `Analise esta imagem de alimento e forneça uma resposta APENAS em formato JSON válido, sem texto adicional antes ou depois. Use esta estrutura exata:
-
-{
-  "alimentos": [
-    {
-      "nome": "nome do alimento",
-      "porcao": "quantidade estimada (ex: 150g, 1 unidade)",
-      "calorias": número,
-      "proteinas": número,
-      "carboidratos": número,
-      "gorduras": número
-    }
-  ],
-  "total": {
-    "calorias": número,
-    "proteinas": número,
-    "carboidratos": número,
-    "gorduras": número
-  },
-  "observacoes": "observações sobre a refeição (opcional)"
-}
-
-Seja preciso nas estimativas de porção e valores nutricionais. Se não conseguir identificar claramente, informe na observação.`,
+              text: 'Analise esta refeição e forneça as informações nutricionais detalhadas.',
             },
             {
               type: 'image_url',
@@ -57,23 +64,18 @@ Seja preciso nas estimativas de porção e valores nutricionais. Se não consegu
           ],
         },
       ],
-      max_tokens: 1000,
+      temperature: 0.5,
+      max_tokens: 1500,
+      response_format: { type: 'json_object' },
     });
 
-    const content = response.choices[0].message.content;
-    
-    if (!content) {
-      throw new Error('Resposta vazia da API');
-    }
-
-    // Parse do JSON retornado
-    const analysis = JSON.parse(content);
+    const analysis = JSON.parse(completion.choices[0].message.content || '{}');
 
     return NextResponse.json(analysis);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro ao analisar imagem:', error);
     return NextResponse.json(
-      { error: 'Erro ao analisar imagem: ' + error.message },
+      { error: 'Erro ao analisar imagem. Tente novamente.' },
       { status: 500 }
     );
   }

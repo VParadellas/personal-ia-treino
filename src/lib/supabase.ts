@@ -35,6 +35,28 @@ export const auth = {
     return { data, error };
   },
 
+  // Login com Google
+  signInWithGoogle: async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    return { data, error };
+  },
+
+  // Login com Facebook
+  signInWithFacebook: async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    return { data, error };
+  },
+
   // Logout
   signOut: async () => {
     const { error } = await supabase.auth.signOut();
