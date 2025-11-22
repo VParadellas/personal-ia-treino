@@ -1,39 +1,39 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
+// Rotas que realmente precisam de login
+const protectedRoutes = ['/treino', '/dieta', '/calorias'];
 
-  // Rotas protegidas que requerem autenticação (REMOVIDO /quiz)
-  const protectedRoutes = ['/treino', '/dieta', '/calorias'];
-  const isProtectedRoute = protectedRoutes.some(route => 
-    req.nextUrl.pathname.startsWith(route)
-  );
+export function middleware(req: NextRequest) {
 
-  // Verificar se tem token de sessão nos cookies do Supabase
-  const supabaseAccessToken = req.cookies.get('sb-qmcpeuzjckvtobjgrnwf-auth-token');
-  const hasSession = !!supabaseAccessToken;
+  const url = req.nextUrl.clone();
 
-  // Se está tentando acessar rota protegida sem estar logado
-  if (isProtectedRoute && !hasSession) {
-    const redirectUrl = new URL('/auth/login', req.url);
-    redirectUrl.searchParams.set('redirect', req.nextUrl.pathname);
-    return NextResponse.redirect(redirectUrl);
+  // O Supabase usa esse cookie — MAS no middleware ele nem sempre está disponível
+  const hasSession =
+    req.cookies.get('sb-qmcpeuzjckvtobjgrnwf-auth-token') ||
+    req.cookies.get('sb-qmcpeuzjckvtobjgrnwf-auth-token#expires');
+
+  const isLoggedIn = !!hasSession;
+
+  const pathname = req.nextUrl.pathname;
+
+  // 1. Se a rota é protegida e não está logado → manda pro login
+  if (protectedRoutes.some((route) => pathname.startsWith(route)) && !isLoggedIn) {
+    url.pathname = '/auth/login';
+    url.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(url);
   }
 
-  // Se está logado e tentando acessar páginas de auth, redireciona para quiz
-  const authRoutes = ['/auth/login', '/auth/signup'];
-  const isAuthRoute = authRoutes.some(route => 
-    req.nextUrl.pathname.startsWith(route)
-  );
-
-  if (isAuthRoute && hasSession) {
-    return NextResponse.redirect(new URL('/quiz', req.url));
+  // 2. Se rota é /auth/* e está logado → manda para /treino
+  if (pathname.startsWith('/auth') && isLoggedIn) {
+    url.pathname = '/treino';
+    return NextResponse.redirect(url);
   }
 
-  return res;
+  // 3. NÃO interferir na rota /quiz — o app decide sozinho quando mostrar
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/quiz/:path*', '/treino/:path*', '/dieta/:path*', '/calorias/:path*', '/auth/:path*'],
+  matcher: ['/treino/:path*', '/dieta/:path*', '/calorias/:path*', '/auth/:path*'],
 };
